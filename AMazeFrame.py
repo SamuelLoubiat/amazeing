@@ -40,9 +40,7 @@ class AMazeFrame:
         for y in range(self.__height):
             for x in range(self.__width):
                 self.add_pixel(addr, x, y, stride, color)
-        self.__mx.mlx_put_image_to_window(self.__mlx_ptr, self.__mlx_window,
-                                          self.__img, 0, 0)
-        self.__mx.mlx_destroy_image(self.__mlx_ptr, self.__img)
+        #self.__mx.mlx_put_image_to_window(self.__mlx_ptr, self.__mlx_window, self.__img, 0, 0)
 
     def generate_background(self, color) -> None:
         self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_background,
@@ -50,25 +48,20 @@ class AMazeFrame:
 
     def draw_x(self, addr, stride, x_start, x_end, y, color):
 
-        max_y = self.__height - 50
-        max_x = self.__width - 50
-
         for i in range(x_start, x_end):
-            if 0 <= i < max_x:
+            if 0 <= i < self.__width:
                 for offset in range(4):
                     target_y = y + offset
-                    if 0 <= target_y < max_y:
+                    if 0 <= target_y < self.__height:
                         addr[target_y * stride + i] = color
 
     def draw_y(self, addr, stride, y_start, y_end, x, color):
-        max_y = self.__height - 50
-        max_x = self.__width - 50
 
         for i in range(y_start, y_end):
-            if 0 <= i < max_y:
+            if 0 <= i < self.__height:
                 for offset in range(4):
                     target_x = x + offset
-                    if 0 <= target_x < max_x:
+                    if 0 <= target_x < self.__width:
                         addr[i * stride + target_x] = color
 
     def __generate_maze(self, maze: str):
@@ -82,6 +75,7 @@ class AMazeFrame:
         maze_size_x = 0
         maze_size_y = 1
 
+        #TODO get from arg
         for char in maze:
             if char == '\n':
                 break
@@ -93,32 +87,34 @@ class AMazeFrame:
 
         cell_x = img_w // maze_size_x
         cell_y = img_h // maze_size_y
-        i = 0
+        offset = 25
+        x = 0
         y = 0
         for char in maze:
             if char == '\n':
-                i = 0
+                x = 0
                 y += 1
                 continue
-            grid_x = i % maze_size_x
-            grid_y = i // maze_size_y
 
             bits = format(int(char, 16), '04b')
-
-            # Dessin des murs
             if bits[0] == '1':  # Mur Nord
-                self.draw_x(addr, stride, grid_x * cell_x, (grid_x + 1) * cell_x,  cell_y * y + 1, 0xFFFFFFFF)
+                self.draw_x(addr, stride, x * cell_x + offset, x * cell_x + offset + cell_x,
+                            cell_y * y + offset, 0xFFFFFFFF)
             if bits[2] == '1':  # Mur Sud
-                self.draw_x(addr, stride, grid_x * cell_x, (grid_x + 1) * cell_x, (grid_y + 1) * cell_y * y - 3, 0xFF00FFFF)
+                self.draw_x(addr, stride, x * cell_x + offset, x * cell_x + offset + cell_x,
+                            cell_y * y + offset + cell_y, 0xFF00FFFF)
             if bits[1] == '1':  # Mur Est
-                self.draw_y(addr, stride, grid_y * cell_y * y, (grid_y + 1) * cell_y * y, (grid_x + 1) * cell_x - 4, 0xFFF00FFF)
+                self.draw_y(addr, stride, cell_y * y + offset, cell_y * y + offset + cell_y,
+                            x * cell_x + offset + cell_x - 4, 0xFFF00FFF)
             if bits[3] == '1':  # Mur Ouest
-                self.draw_y(addr, stride, grid_y * cell_y * y, (grid_y + 1) * cell_y * y, (grid_x) * cell_x, 0xFFFFFFFF)
+                self.draw_y(addr, stride, cell_y * y + offset, cell_y * y + offset + cell_y,
+                            x * cell_x + offset, 0xFFFFFFFF)
 
-            i += 1
+            x += 1
+            self.__mx.mlx_put_image_to_window(self.__mlx_ptr, self.__mlx_window,
+                                              self.__img, 0, 0)
 
-        self.__mx.mlx_put_image_to_window(self.__mlx_ptr, self.__mlx_window,
-                                          self.__img, 25, 25)
+        #self.__mx.mlx_put_image_to_window(self.__mlx_ptr, self.__mlx_window, self.__img, 0, 0)
 
     def generate_maze(self, maze: str):
         self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_maze, maze)
