@@ -15,6 +15,10 @@ class AMazeFrame:
         self.current_idx = 0
         self.offset = 25
         self.__paff = False
+        self.colors = [{'wall': 0xFFFFFFFF,
+                                 'paff': 0xFF123456,
+                                 'background': 0x5F000000}, {'wall': 0xFF2C3E50, 'background': 0xFF1A1A1A, 'paff': 0xFFE74C3C}, {'wall': 0xFF0F380F, 'background': 0xFF8BAC0F, 'paff': 0xFF9BBC0F}, {'wall': 0xFF4B0082, 'background': 0xFF212121, 'paff': 0xFF9B59B6}]
+        self.colors_index = 0
 
     def close(self, *param: Any) -> None:
         if param[0] == 113:
@@ -23,6 +27,14 @@ class AMazeFrame:
             self.__mx.mlx_loop_exit(self.__mlx_ptr)
         if param[0] == 112:
             self.__paff = not self.__paff
+        if param[0] == 99:
+            self.colors_index += 1
+            if self.colors_index == len(self.colors):
+                self.colors_index = 0
+            self.__maze_dict['wall_color'] = self.colors[self.colors_index]['wall']
+            self.__maze_dict['paff_color'] = self.colors[self.colors_index]['paff']
+            self.__maze_dict['background_color'] = self.colors[self.colors_index]['background']
+
 
     def close_icon(self, _: Any) -> None:
         self.__mx.mlx_destroy_image(self.__mlx_ptr, self.__img)
@@ -184,13 +196,14 @@ class AMazeFrame:
 
     def generate_maze(self, maze: str, maze_entry: tuple[int, int],
                       maze_exit: tuple[int, int], maze_resolv: str) -> None:
-        self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_maze,
-                                {'maze': maze, 'maze_entry': maze_entry,
+        self.__maze_dict = {'maze': maze, 'maze_entry': maze_entry,
                                  'maze_exit': maze_exit,
                                  'maze_resolv': maze_resolv,
                                  'wall_color': 0xFFFFFFFF,
                                  'paff_color': 0xFF123456,
-                                 'background_color': 0x5F000000})
+                                 'background_color': 0x5F000000}
+        self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_maze,
+                                self.__maze_dict)
 
     def start_loop(self) -> None:
         self.__mx.mlx_loop(self.__mlx_ptr)
