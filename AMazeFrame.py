@@ -2,10 +2,12 @@ from typing import Any
 
 from mlx import Mlx
 
+from Config import Config
+
 
 class AMazeFrame:
     def __init__(self) -> None:
-        self.__maze_dict = None
+        self.__maze_dict: dict[Any, Any] = {}
         self.__mlx_window = None
         self.__mx = Mlx()
         self.__mlx_ptr = self.__mx.mlx_init()
@@ -66,7 +68,7 @@ class AMazeFrame:
                 except IndexError:
                     raise Exception(x, y)
 
-    def draw_help(self):
+    def draw_help(self) -> None:
         self.__mx.mlx_string_put(self.__mlx_ptr, self.__mlx_window, 25,
                                  self.__height - 110, 0xFFFFFFFF,
                                  "A-Maze-Ing keyboard Help")
@@ -111,7 +113,7 @@ class AMazeFrame:
                       (y + 1) * self.cell_y - (self.cell_y // 4),
                       color)
 
-    def __generate_maze(self, maze_dict: dict[Any, Any]) -> None:
+    def __generate_maze(self, maze_dict: dict[str, Any]) -> None:
         if not self.__update:
             return
         maze = maze_dict['maze']
@@ -192,6 +194,7 @@ class AMazeFrame:
                 last_char = char
             self.draw_connection(last_char, (x, y), paff_color)
 
+        self.draw_help()
         self.__mx.mlx_put_image_to_window(self.__mlx_ptr,
                                           self.__mlx_window, self.__img,
                                           (
@@ -201,13 +204,12 @@ class AMazeFrame:
                                                    self.__height - 100) - self.cell_y * (
                                                    maze.count(
                                                        '\n') + 1)) // 2)
-        self.draw_help()
         self.__update = False
 
-    def generate_maze(self, maze: str, maze_entry: tuple[int, int],
-                      maze_exit: tuple[int, int], maze_resolv: str) -> None:
-        self.__maze_dict = {'maze': maze, 'maze_entry': maze_entry,
-                            'maze_exit': maze_exit,
+    def generate_maze(self, maze: str, settings: Config,
+                      maze_resolv: str) -> None:
+        self.__maze_dict = {'maze': maze, 'maze_entry': settings.entry,
+                            'maze_exit': settings.exit,
                             'maze_resolv': maze_resolv,
                             'wall_color': 0xFFFFFFFF,
                             'paff_color': 0xFF123456,
