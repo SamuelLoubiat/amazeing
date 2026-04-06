@@ -3,5 +3,5 @@ HEIGHT=20
 ENTRY=1,1
 EXIT=19,14
 OUTPUT_FILE=maze.txt
-#PERFECT=false
-seed=wiwi
+PERFECT=false
+seed=42

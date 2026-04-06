@@ -1,13 +1,16 @@
+from random import random
 from typing import Any
 
 from mlx import Mlx
 
 from Config import Config
+from maze_gen import kruskal_generator, bfts_solution
 
 
 class AMazeFrame:
     def __init__(self) -> None:
         self.__maze_dict: dict[Any, Any] = {}
+        self.__settings: Config
         self.__mlx_window = None
         self.__mx = Mlx()
         self.__mlx_ptr = self.__mx.mlx_init()
@@ -17,6 +20,11 @@ class AMazeFrame:
         self.__height = int(self.__height * 0.9)
         self.__img = self.__mx.mlx_new_image(self.__mlx_ptr, self.__width,
                                              self.__height)
+        addr_raw, bpp, line_size, endian = self.__mx.mlx_get_data_addr(
+            self.__img)
+
+        self.__addr = addr_raw.cast('I')
+        self.__stride = line_size // (bpp // 8)
         self.offset = 25
         self.__paff = False
         self.__update = True
@@ -45,6 +53,18 @@ class AMazeFrame:
                 'paff']
             self.__maze_dict['background_color'] = \
                 self.colors[self.colors_index]['background']
+            self.__update = True
+        if param[0] == 114:
+            maze = kruskal_generator(self.__settings.width,
+                                     self.__settings.height, random(),
+                                     self.__settings.perfect)
+            self.__maze_dict['maze_resolv'] = bfts_solution(
+                self.__settings.width,
+                self.__settings.height, maze,
+                self.__settings.entry,
+                self.__settings.exit)
+
+            self.__maze_dict['maze'] = maze
             self.__update = True
 
     def close_icon(self, _: Any) -> None:
@@ -113,74 +133,47 @@ class AMazeFrame:
                       (y + 1) * self.cell_y - (self.cell_y // 4),
                       color)
 
-    def __generate_maze(self, maze_dict: dict[str, Any]) -> None:
+    def __generate_maze(self, *param: Any) -> None:
         if not self.__update:
             return
-        maze = maze_dict['maze']
-        maze_entry = maze_dict['maze_entry']
-        maze_exit = maze_dict['maze_exit']
-        resolver = maze_dict['maze_resolv']
-        wall_color = maze_dict['wall_color']
-        paff_color = maze_dict['paff_color']
-        background_color = maze_dict['background_color']
-        img_w = self.__width - 50
-        img_h = self.__height - 150
-        size = 0
-        if img_w == img_h:
-            size = img_w
-        elif img_w < img_h:
-            size = img_w
-        elif img_w > img_h:
-            size = img_h
-        addr_raw, bpp, line_size, endian = self.__mx.mlx_get_data_addr(
-            self.__img)
-
-        self.__addr = addr_raw.cast('I')
-        self.__stride = line_size // (bpp // 8)
-
-        self.cell_x = size // maze.find('\n')
-        self.cell_y = size // (maze.count('\n') + 1)
-        x = 0
-        y = 0
-
-        for char in maze:
-            if char == '\n':
-                x = 0
-                y += 1
-                continue
-            real_x = x * self.cell_x
-            real_y = y * self.cell_y
-            self.draw(real_x, real_x + self.cell_x,
-                      real_y, real_y + self.cell_y, background_color)
-            bits = int(char, 16)
-            if (x, y) == maze_entry or (x, y) == maze_exit:
+        maze = self.__maze_dict['maze']
+        maze_entry = self.__maze_dict['maze_entry']
+        maze_exit = self.__maze_dict['maze_exit']
+        wall_color = self.__maze_dict['wall_color']
+        for y in range(self.__settings.height):
+            for x in range(self.__settings.width):
+                real_x = x * self.cell_x
+                real_y = y * self.cell_y
                 self.draw(real_x, real_x + self.cell_x,
-                          real_y, real_y + self.cell_y, 0x5F3456FF)
-            if bits == 15:
-                self.draw(real_x, real_x + self.cell_x, real_y,
-                          real_y + self.cell_y, wall_color)
-                x += 1
-                continue
-            if bits & (1 << 0):  # Mur Nord
-                pass
-                self.draw(real_x, real_x + self.cell_x, real_y,
-                          real_y, wall_color)
-            if bits & (1 << 2):  # Mur Sud
-                self.draw(real_x, real_x + self.cell_x,
-                          real_y + self.cell_y, real_y + self.cell_y,
-                          wall_color)
-            if bits & (1 << 1):  # Mur Est
-                self.draw(real_x + self.cell_x, real_x + self.cell_x,
-                          real_y, real_y + self.cell_y, wall_color)
-            if bits & (1 << 3):  # Mur Ouest
-                self.draw(real_x, real_x, real_y, real_y + self.cell_y,
-                          wall_color)
-            x += 1
+                          real_y, real_y + self.cell_y,
+                          self.__maze_dict['background_color'])
+                if (x, y) == maze_entry or (x, y) == maze_exit:
+                    self.draw(real_x, real_x + self.cell_x,
+                              real_y, real_y + self.cell_y, 0xFF3456FF)
+                if maze[x][y][0] and maze[x][y][1] and maze[x][y][2] and \
+                        maze[x][y][3]:
+                    self.draw(real_x, real_x + self.cell_x, real_y,
+                              real_y + self.cell_y, wall_color)
+                    continue
+                if maze[x][y][3]:  # Mur Nord
+                    self.draw(real_x, real_x + self.cell_x, real_y,
+                              real_y, wall_color)
+                if maze[x][y][1]:  # Mur Sud
+                    self.draw(real_x, real_x + self.cell_x,
+                              real_y + self.cell_y, real_y + self.cell_y,
+                              wall_color)
+                if maze[x][y][2]:  # Mur Est
+                    self.draw(real_x + self.cell_x, real_x + self.cell_x,
+                              real_y, real_y + self.cell_y, wall_color)
+                if maze[x][y][0]:  # Mur Ouest
+                    self.draw(real_x, real_x, real_y, real_y + self.cell_y,
+                              wall_color)
 
         if self.__paff:
+            paff_color = self.__maze_dict['paff_color']
             x, y = maze_entry
             last_char: str = ''
-            for char in resolver:
+            for char in self.__maze_dict['maze_resolv']:
                 if last_char != '':
                     self.draw_connection(last_char, (x, y), paff_color)
                 if char == 'N':
@@ -197,25 +190,34 @@ class AMazeFrame:
         self.draw_help()
         self.__mx.mlx_put_image_to_window(self.__mlx_ptr,
                                           self.__mlx_window, self.__img,
-                                          (
-                                                  self.__width - self.cell_x * maze.find(
-                                              '\n')) // 2,
-                                          ((
-                                                   self.__height - 100) - self.cell_y * (
-                                                   maze.count(
-                                                       '\n') + 1)) // 2)
+                                          (self.__width - self.cell_x *
+                                           self.__settings.width) // 2,
+                                          ((self.__height - 100) - self.cell_y
+                                           * self.__settings.height) // 2)
         self.__update = False
 
-    def generate_maze(self, maze: str, settings: Config,
+    def generate_maze(self, maze: Any, settings: Config,
                       maze_resolv: str) -> None:
+        self.__settings = settings
         self.__maze_dict = {'maze': maze, 'maze_entry': settings.entry,
                             'maze_exit': settings.exit,
                             'maze_resolv': maze_resolv,
                             'wall_color': 0xFFFFFFFF,
                             'paff_color': 0xFF123456,
                             'background_color': 0xFF000000}
-        self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_maze,
-                                self.__maze_dict)
+        img_w = self.__width - 50
+        img_h = self.__height - 150
+        size = 0
+        if img_w == img_h:
+            size = img_w
+        elif img_w < img_h:
+            size = img_w
+        elif img_w > img_h:
+            size = img_h
+
+        self.cell_x = size // self.__settings.width
+        self.cell_y = size // self.__settings.height
+        self.__mx.mlx_loop_hook(self.__mlx_ptr, self.__generate_maze, None)
 
     def start_loop(self) -> None:
         self.__mx.mlx_loop(self.__mlx_ptr)

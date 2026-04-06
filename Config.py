@@ -6,13 +6,13 @@ from typing_extensions import Self
 
 
 class Config(BaseSettings):
-    width: int = Field(default=20)
-    height: int = Field(default=20)
-    entry: str | tuple[int, int] = Field(default=(0, 0))
+    width: int = Field(default=20, ge=8)
+    height: int = Field(default=20, ge=8)
+    entry: tuple[int, int] | str = Field(default=(0, 0))
     exit: str | tuple[int, int] = Field(default=(20, 20))
     output_file: str = Field(default="maze.txt")
     perfect: bool = Field(default=False)
-    seed: str = Field(default='42')
+    seed: int = Field(default=42)
 
     model_config = SettingsConfigDict(
         env_file="config.txt"
@@ -27,28 +27,29 @@ class Config(BaseSettings):
 
     @model_validator(mode='after')
     def decode_dict(self) -> Self:
-        if self.entry[0] < 0:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.entry[0]} is negative")
-        if self.entry[1] < 0:
-            raise Exception(
-                f"Invalid entry Coordinate y: {self.entry[0]} is negative")
-        if self.exit[0] < 0:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.entry[0]} is negative")
-        if self.exit[1] < 0:
-            raise Exception(
-                f"Invalid entry Coordinate y: {self.entry[0]} is negative")
-        if self.entry[0] > self.width:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.entry[0]} is out of maze width: {self.width}")
-        if self.entry[1] > self.height:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.entry[1]} is out of maze width: {self.height}")
-        if self.exit[0] > self.width:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.exit[0]} is out of maze width: {self.width}")
-        if self.exit[1] > self.height:
-            raise Exception(
-                f"Invalid entry Coordinate x: {self.exit[1]} is out of maze width: {self.height}")
+        if isinstance(self.entry, tuple) and isinstance(self.exit, tuple):
+            if self.entry[0] < 0:
+                raise Exception("Invalid entry Coordinate x: "
+                                f"{self.entry[0]} is negative")
+            if self.entry[1] < 0:
+                raise Exception(
+                    f"Invalid entry Coordinate y: {self.entry[0]} is negative")
+            if self.exit[0] < 0:
+                raise Exception(
+                    f"Invalid exit Coordinate x: {self.entry[0]} is negative")
+            if self.exit[1] < 0:
+                raise Exception(
+                    f"Invalid exit Coordinate y: {self.entry[0]} is negative")
+            if self.entry[0] > self.width:
+                raise Exception(f"Invalid entry Coordinate x: {self.entry[0]}"
+                                f" is out of maze width: {self.width}")
+            if self.entry[1] > self.height:
+                raise Exception(f"Invalid entry Coordinate x: {self.entry[1]}"
+                                f" is out of maze width: {self.height}")
+            if self.exit[0] > self.width:
+                raise Exception(f"Invalid exit Coordinate x: {self.exit[0]}"
+                                f" is out of maze width: {self.width}")
+            if self.exit[1] > self.height:
+                raise Exception(f"Invalid exit Coordinate x: {self.exit[1]}"
+                                f" is out of maze width: {self.height}")
         return self
